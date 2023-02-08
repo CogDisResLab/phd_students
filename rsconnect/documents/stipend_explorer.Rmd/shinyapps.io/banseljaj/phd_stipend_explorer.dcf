@@ -5,9 +5,9 @@ account: banseljaj
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 4155543
-bundleId: 4618525
+bundleId: 4649008
 url: https://banseljaj.shinyapps.io/phd_stipend_explorer/
-when: 1621476782.73187
-lastSyncTime: 1621476782.73189
+when: 1622169978.72493
+lastSyncTime: 1622169978.72495
 asMultiple: FALSE
 asStatic: FALSE

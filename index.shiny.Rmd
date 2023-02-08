@@ -1,0 +1,513 @@
+---
+title: "PhD Student Stipend Exploration"
+author: "Dr. Robert E. McCullumsmith"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: rows
+    vertical_layout: fill
+    theme: bootstrap
+    source_code: embed
+runtime: shiny
+---
+
+```{r global, include=FALSE}
+library(flexdashboard)
+library(shinyWidgets)
+library(tibble)
+library(tidyr)
+library(dplyr)
+library(scales)
+library(stringr)
+library(ggplot2)
+library(plotly)
+
+my_dollar <- label_dollar(negative_parens = FALSE)
+format_change <- function(value) {
+  if (value > 0) {
+    out <- str_c("+", my_dollar(value))
+  } else {
+    out <- my_dollar(value)
+  }
+  out
+}
+```
+
+Enrollment Projections
+=======================================================================
+
+Inputs {.sidebar}
+-----------------------------------------------------------------------
+
+```{r}
+autonumericInput("budget",
+             h4("Budget Value"),
+             value = 272976,
+             currencySymbol = "$",
+             digitGroupSeparator = ",",
+             align = "left",
+             maximumValue = 1000000)
+sliderInput("stipend",
+            h4("PhD Stipend"),
+            sort(stipend_options),
+            value = 24816,
+            min = 24000,
+            max = 34000,
+            step = 500,
+            pre = "$",
+            sep = ",")
+radioButtons("insurance",
+             h4("Include Health Insurance"),
+             choiceNames = c("Yes", "No"),
+             choiceValues = c(TRUE, FALSE),
+             selected = FALSE,
+             inline = TRUE)
+```
+
+
+Row
+-----------------------------------------------------------------------
+
+
+### Input Data - Budget
+
+```{r}
+renderValueBox({
+  budget <- as.integer(input$budget)
+  valueBox(my_dollar(budget),
+           caption = "Departmental Budget",
+           icon = "fa-dollar-sign")
+})
+```
+
+### Input Data - Stipend
+
+```{r}
+renderValueBox({
+  stipend <- as.integer(input$stipend)
+  current <- stipend == 24816
+  valueBox(dollar(stipend),
+           caption = if_else(current, "Current Stipend", "Proposed Stipend"),
+           icon = "fa-money-check-alt",
+           color = case_when(
+             stipend == 24816 ~ "primary",
+             stipend < 24816 ~ "danger",
+             stipend > 24816 ~ "success"
+           )
+  )
+})
+```
+
+### Input Data - Insurance
+
+```{r}
+renderValueBox({
+  insurance <- as.logical(input$insurance)
+  valueBox(if_else(insurance, "Yes", "No"),
+           caption = "Include Insurance?",
+           icon = "fa-hospital",
+           color = if_else(insurance, "success", "danger"))
+})
+```
+
+
+Row
+-----------------------------------------------------------------------
+
+### Students Supported - Best Case
+
+```{r}
+
+calculate_supported_students_min <- reactive({
+  budget <- as.integer(input$budget)
+  stipend <- as.integer(input$stipend)
+  insurance <- if_else(
+    as.logical(input$insurance),
+    2324,
+    0
+  )
+  
+  students <- floor(budget / (stipend + insurance))
+  students
+})
+
+renderValueBox({
+  supported_students <- calculate_supported_students_min()
+  valueBox(supported_students,
+           caption = "Students Supported",
+           icon = "fa-graduation-cap",
+           color = "info")
+})
+```
+
+### Budget Surplus
+
+```{r}
+
+calculate_remainder_surplus <- reactive({
+  budget <- as.integer(input$budget)
+  stipend <- as.integer(input$stipend)
+  insurance <- if_else(
+    as.logical(input$insurance),
+    2324,
+    0
+  )
+  cost <- stipend + insurance
+  
+  students <- floor(budget / cost)
+  remainder <- budget - (students * cost)
+})
+
+renderValueBox({
+  budget_remainder <- calculate_remainder_surplus()
+  valueBox(my_dollar(budget_remainder),
+           caption = "Budget Surplus",
+           icon = "fa-dollar-sign",
+           color = ifelse(budget_remainder > 0, "success", "primary"))
+})
+```
+
+Row
+-----------------------------------------------------------------------
+
+### Students Supported - Worst Case
+
+```{r}
+
+calculate_supported_students_max <- reactive({
+  budget <- as.integer(input$budget)
+  stipend <- as.integer(input$stipend)
+  insurance <- if_else(
+    as.logical(input$insurance),
+    2324,
+    0
+  )
+  
+  students <- ceiling(budget / (stipend + insurance))
+  students
+})
+
+renderValueBox({
+  supported_students <- calculate_supported_students_max()
+  valueBox(supported_students,
+           caption = "Students Supported",
+           icon = "fa-graduation-cap",
+           color = "warning")
+})
+```
+
+### Budget Shortfall
+
+```{r}
+
+calculate_remainder_shortfall <- reactive({
+  budget <- as.integer(input$budget)
+  stipend <- as.integer(input$stipend)
+  insurance <- if_else(
+    as.logical(input$insurance),
+    2324,
+    0
+  )
+  cost <- stipend + insurance
+  
+  students <- ceiling(budget / cost)
+  remainder <- budget - (students * cost)
+})
+
+renderValueBox({
+  budget_remainder <- calculate_remainder_shortfall()
+  valueBox(my_dollar(budget_remainder),
+           caption = "Budget Shortfall",
+           icon = "fa-dollar-sign",
+           color = ifelse(budget_remainder < 0, "danger", "primary"))
+})
+```
+
+Row
+-----------------------------------------------------------------------
+
+### Visualizing Students vs Stipends
+
+```{r}
+
+renderPlotly({
+  budget <- as.integer(input$budget)
+  stipend <- seq(24000, 34000, 500)
+  min_students <- floor(budget / stipend)
+  min_students_insured <- floor(budget / (stipend + 2324))
+  
+  dataset <-
+    tibble(stipend, min_students, min_students_insured) %>%
+    pivot_longer(starts_with("min"),
+                 names_to = "category",
+                 values_to = "count") %>%
+    mutate(Stipend = dollar(stipend),
+           `Insurance Included` = if_else(str_detect(category, "insured"), "Yes", "No"),
+           Students = count,
+           category_renamed = case_when(
+             str_detect(category, "insured") ~ "Stipend Only",
+             TRUE ~ "Stipend and Insurance"))
+  
+  g <-
+    ggplot(dataset,
+           aes(
+             x = stipend,
+             y = count,
+             color = category_renamed,
+             group = category_renamed,
+             stipend = Stipend,
+             insurance = `Insurance Included`,
+             students = Students
+           ))
+  
+  p <- g +
+    geom_point() +
+    geom_line() +
+    theme_minimal() +
+    scale_color_manual(
+      name = "",
+      breaks = c("Stipend Only", "Stipend and Insurance"),
+      limits = c("Stipend Only", "Stipend and Insurance"),
+      values = c("#D95F02", "#1B9E77")
+    ) +
+    scale_x_continuous(breaks = seq(24000, 34000, 1000), labels = label_dollar()) +
+    scale_y_continuous(breaks = function(x) seq(ceiling(x[1]), floor(x[2]), by = 1)) +
+    xlab("Stipend Value") +
+    ylab("# of Students") +
+    geom_vline(xintercept = 24816, lwd = 0.95, color = "grey80") +
+    geom_vline(xintercept = input$stipend, lwd = 0.95, color = "lightgreen")
+  
+  pt <- ggplotly(p, tooltip = c("Stipend", "Insurance Included", "Students")) %>%
+    plotly::layout(dragmode = FALSE) %>%
+    add_annotations(
+      ax = 26000,
+      ay = max(dataset$count) * 0.95, 
+      x = 24816,
+      y = max(dataset$count),
+      xref = "x",
+      yref = "y",
+      axref = "x",
+      ayref = "y",
+      xanchor = "left",
+#      yanchor = "bottom",
+      text = str_glue("Current Stipend: {dollar(24816)}\nCurrent Students: {floor(budget/24816)}"),
+      showarrow = T,
+      bordercolor = "black",
+      borderwidth = 0,
+      bgcolor = "grey80"
+    ) %>%
+    add_annotations(
+      ax = 30000,
+      ay = quantile(dataset$count, 0.9) * 0.95, 
+      x = input$stipend,
+      y = max(dataset$count) * 0.75,
+      xref = "x",
+      yref = "y",
+      axref = "x",
+      ayref = "y",
+#      xanchor = "left",
+#      yanchor = "bottom",
+      text = str_glue("Proposed Stipend: {dollar(input$stipend)}\nStudents: {floor(budget/input$stipend)}"),
+      showarrow = T,
+      bordercolor = "black",
+      borderwidth = 0,
+      bgcolor = "grey80"
+    ) %>%
+    add_annotations(
+      x = 33000,
+      y = max(dataset$count),
+      xref = "x",
+      yref = "y",
+      text = str_glue("Budget: {dollar(budget)}"),
+      xanchor = 'center',
+      showarrow = F,
+      bordercolor = "black",
+      borderwidth = 0,
+      bgcolor = "lightgreen"
+    ) %>%
+    config(
+      displayModeBar = "static",
+      displaylogo = FALSE,
+      modeBarButtonsToRemove = list(
+        "sendDataToCloud",
+        "toImage",
+        "hoverClosestCartesian",
+        "hoverCompareCartesian",
+        "select2d",
+        "lasso2d",
+        "zoomIn2d",
+        "zoomOut2d",
+        "toggleSpikelines",
+        "pan2d"
+      )
+    )
+  
+  pt
+})
+```
+
+Budget Projections
+=======================================================================
+
+Inputs {.sidebar}
+-----------------------------------------------------------------------
+
+```{r}
+autonumericInput("initial_budget",
+             h4("Initial Budget Value"),
+             value = 272976,
+             currencySymbol = "$",
+             digitGroupSeparator = ",",
+             align = "left",
+             maximumValue = 1000000)
+sliderInput("desired_students",
+            h4("Desired # of Students"),
+            value = 11,
+            min = 1,
+            max = 25
+            )
+sliderInput("desired_stipend",
+            h4("PhD Stipend"),
+            sort(stipend_options),
+            value = 24816,
+            min = 24000,
+            max = 34000,
+            step = 500,
+            pre = "$",
+            sep = ",")
+radioButtons("include_insurance",
+             h4("Include Health Insurance"),
+             choiceNames = c("Yes", "No"),
+             choiceValues = c(TRUE, FALSE),
+             selected = FALSE,
+             inline = TRUE)
+```
+
+
+Row
+-----------------------------------------------------------------------
+
+### Input Data - Students
+
+```{r}
+renderValueBox({
+  students <- as.integer(input$desired_students)
+  valueBox(students,
+           caption = "Desired Number of Students",
+           icon = "fa-graduation-cap",
+           color = "primary"
+  )
+})
+```
+
+### Input Data - Stipend
+
+```{r}
+renderValueBox({
+  stipend <- as.integer(input$desired_stipend)
+  current <- stipend == 24816
+  valueBox(dollar(stipend),
+           caption = if_else(current, "Current Stipend", "Proposed Stipend"),
+           icon = "fa-money-check-alt",
+           color = case_when(
+             stipend == 24816 ~ "primary",
+             stipend < 24816 ~ "danger",
+             stipend > 24816 ~ "success"
+           )
+  )
+})
+```
+
+### Input Data - Insurance
+
+```{r}
+renderValueBox({
+  insurance <- as.logical(input$include_insurance)
+  valueBox(if_else(insurance, "Yes", "No"),
+           caption = "Include Insurance?",
+           icon = "fa-hospital",
+           color = if_else(insurance, "success", "danger"))
+})
+```
+
+
+Row
+-----------------------------------------------------------------------
+
+### Input Data - Initial Budget
+
+```{r}
+renderValueBox({
+  budget <- as.integer(input$initial_budget)
+  valueBox(my_dollar(as.integer(input$initial_budget)),
+           caption = "Initial Departmental Budget",
+           icon = "fa-dollar-sign")
+})
+```
+
+### Projected Budget
+
+```{r}
+
+calculate_projected_budget <- reactive({
+  students <- as.integer(input$desired_students)
+  stipend <- as.integer(input$desired_stipend)
+  insurance <- if_else(
+    as.logical(input$include_insurance),
+    2324,
+    0
+  )
+  
+  budget <- students * (stipend + insurance)
+  budget
+})
+
+renderValueBox({
+  budget <- calculate_projected_budget()
+  valueBox(my_dollar(budget),
+           caption = "Projected Budget",
+           icon = "fa-dollar-sign")
+})
+```
+
+Row
+-----------------------------------------------------------------------
+
+### Budget Increase
+
+```{r}
+
+renderValueBox({
+  initial <- as.integer(input$initial_budget)
+  projected <- calculate_projected_budget()
+  difference <- projected - initial
+  valueBox(format_change(difference),
+           caption = "Budget Change",
+           icon = "fa-dollar-sign",
+           color = case_when(
+             difference == 0 ~ "primary",
+             difference < 0 ~ "danger",
+             difference > 0 ~ "success"
+           ))
+})
+```
+
+### Change Per Student
+
+```{r}
+
+renderValueBox({
+  initial <- as.integer(input$initial_budget)
+  projected <- calculate_projected_budget()
+  difference <- projected - initial
+  students <- as.integer(input$desired_students)
+  per_student <- difference / students
+  valueBox(format_change(per_student),
+           caption = "Budget Change Per Student",
+           icon = "fa-dollar-sign",
+           color = case_when(
+             per_student == 0 ~ "primary",
+             per_student < 0 ~ "danger",
+             per_student > 0 ~ "success"
+           ))
+})
+```

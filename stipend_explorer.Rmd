@@ -21,7 +21,15 @@ library(stringr)
 library(ggplot2)
 library(plotly)
 
-my_dollar <- dollar_format(negative_parens = FALSE)
+my_dollar <- label_dollar(negative_parens = FALSE)
+format_change <- function(value) {
+  if (value > 0) {
+    out <- str_c("+", my_dollar(value))
+  } else {
+    out <- my_dollar(value)
+  }
+  out
+}
 ```
 
 Enrollment Projections
@@ -472,12 +480,8 @@ renderValueBox({
   initial <- as.integer(input$initial_budget)
   projected <- calculate_projected_budget()
   difference <- projected - initial
-  valueBox(my_dollar(difference),
-           caption = case_when(
-             difference == 0 ~ "Budget",
-             difference > 0 ~ "Budget Increase Required",
-             difference < 0 ~ "Budget Surplus"
-           ),
+  valueBox(format_change(difference),
+           caption = "Budget Change",
            icon = "fa-dollar-sign",
            color = case_when(
              difference == 0 ~ "primary",
@@ -497,7 +501,7 @@ renderValueBox({
   difference <- projected - initial
   students <- as.integer(input$desired_students)
   per_student <- difference / students
-  valueBox(my_dollar(per_student),
+  valueBox(format_change(per_student),
            caption = "Budget Change Per Student",
            icon = "fa-dollar-sign",
            color = case_when(

@@ -1,5 +1,13 @@
 # PHD Students Stipend Planner
 
+![GitHub last commit](https://img.shields.io/github/last-commit/CogDisResLab/phd_students)
+![GitHub code size in bytes](https://img.shields.io/github/languages/code-size/CogDisResLab/phd_students)
+![GitHub](https://img.shields.io/github/license/CogDisResLab/phd_students)
+
+![GitHub release (latest by date)](https://img.shields.io/github/v/release/CogDisResLab/phd_students)
+![Docker Image Version (latest by date)](https://img.shields.io/docker/v/cdrl/phd_students?label=docker&logo=docker)
+![Docker Image Size (latest semver)](https://img.shields.io/docker/image-size/cdrl/phd_students?logo=docker&sort=semver)
+
 This is a simple visualizer for projecting changes in graduate student stipend 
 on the budget. This is built as an interactive document in R Markdown.
 

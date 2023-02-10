@@ -1,6 +1,6 @@
 {
   "R": {
-    "Version": "4.2.1",
+    "Version": "4.2.2",
     "Repositories": [
       {
         "Name": "CRAN",
@@ -366,13 +366,6 @@
       "Repository": "CRAN",
       "Hash": "6d3bef2e305f55c705c674653c7d7d3d"
     },
-    "packrat": {
-      "Package": "packrat",
-      "Version": "0.8.1",
-      "Source": "Repository",
-      "Repository": "CRAN",
-      "Hash": "d84055adcb6bb1f4f0ce8c5f235bc328"
-    },
     "pillar": {
       "Package": "pillar",
       "Version": "1.7.0",
@@ -435,20 +428,6 @@
       "Source": "Repository",
       "Repository": "CRAN",
       "Hash": "31b60a882fabfabf6785b8599ffeb8ba"
-    },
-    "rsconnect": {
-      "Package": "rsconnect",
-      "Version": "0.8.26",
-      "Source": "Repository",
-      "Repository": "CRAN",
-      "Hash": "c274aa0076b1892bf702de3257e67275"
-    },
-    "rstudioapi": {
-      "Package": "rstudioapi",
-      "Version": "0.13",
-      "Source": "Repository",
-      "Repository": "CRAN",
-      "Hash": "06c85365a03fdaf699966cc1d3cf53ea"
     },
     "sass": {
       "Package": "sass",
@@ -564,10 +543,10 @@
     },
     "xfun": {
       "Package": "xfun",
-      "Version": "0.31",
+      "Version": "0.37",
       "Source": "Repository",
       "Repository": "CRAN",
-      "Hash": "a318c6f752b8dcfe9fb74d897418ab2b"
+      "Hash": "a6860e1400a8fd1ddb6d9b4230cc34ab"
     },
     "xtable": {
       "Package": "xtable",
